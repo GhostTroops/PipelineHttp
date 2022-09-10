@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -133,7 +134,7 @@ func (r *PipelineHttp) GetTransport() *http.Transport {
 	tr := &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
 		DialContext:           r.Dial,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
 		DisableKeepAlives:     false,
 		MaxIdleConns:          r.MaxIdleConns,
 		IdleConnTimeout:       r.IdleConnTimeout,
@@ -214,7 +215,7 @@ func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk fu
 		oUrl.Scheme = "http"
 	}
 	szUrl = oUrl.Scheme + "://" + oUrl.Host
-
+	var wg sync.WaitGroup
 	for _, j := range dirs {
 		if r.IsClosed {
 			return
@@ -225,9 +226,11 @@ func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk fu
 		default:
 			{
 				c02 <- struct{}{}
+				wg.Add(1)
 				go func(s2 string) {
 					defer func() {
 						<-c02
+						wg.Done()
 					}()
 					select {
 					case <-r.Ctx.Done():
@@ -247,6 +250,6 @@ func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk fu
 				continue
 			}
 		}
-
 	}
+	wg.Wait()
 }

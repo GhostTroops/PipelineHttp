@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 )
 
 //go:embed testUrl.txt
@@ -22,6 +23,7 @@ func main() {
 	a := strings.Split(szUrls, "\n")
 	c01 := make(chan struct{}, 4)
 	x := strings.Split(szPath, "\n")
+	var wg sync.WaitGroup
 	for _, i := range a {
 		c01 <- struct{}{}
 		oUrl, err := url.Parse(i)
@@ -32,9 +34,11 @@ func main() {
 			oUrl.Scheme = "http"
 		}
 		i = oUrl.Scheme + "://" + oUrl.Host
+		wg.Add(1)
 		go func(s1 string) {
 			defer func() {
 				<-c01
+				wg.Done()
 			}()
 			x1 := xxx.NewPipelineHttp()
 			defer x1.Close()
@@ -50,4 +54,5 @@ func main() {
 
 		}(i)
 	}
+	wg.Wait()
 }
