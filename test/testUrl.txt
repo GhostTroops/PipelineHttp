@@ -1,10 +1,6 @@
- /
- /kylin/css/styles.min.20200627083337.css
 /
 /+CSCOE+/win.js
 /+CSCOU+/csco_logo.gif
-//archives/images/b-lpowered.png
-//favicon.ico
 /1dJWo6zuOEFY
 /?file=favicon.ico
 /App_Themes/Default/bootstrap.css
@@ -32,6 +28,7 @@
 /appliance/content/appliance.js
 /appliance/content/globe.png
 /archives/images/b-folder.png
+/archives/images/b-lpowered.png
 /archives/images/b-smallhelp.png
 /assets/admin/layout/img/logo-big.png
 /assets/app/media/logo-plain.svg
@@ -84,7 +81,6 @@
 /f2g9a0gh6a
 /favicon-32x32.png?v=1033480
 /favicon-webmin.ico
-/favicon.ico     
 /favicon.ico
 /favicon.ico?v=2
 /favicon.png
@@ -182,6 +178,7 @@
 /js/module/loginjump.js
 /kindeditor/plugins/map/map.js
 /kindeditor/plugins/table/table.js
+/kylin/css/styles.min.20200627083337.css
 /kylin/image/favicon.ico
 /languageId=
 /lib/tpl/dokuwiki/images/favicon.ico

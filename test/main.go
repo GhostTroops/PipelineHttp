@@ -45,6 +45,8 @@ func main() {
 					log.Printf("%d %s", resp.StatusCode, szU)
 				}
 			})
+			//time.Sleep(time.Second * 5)
+			//x1.Close()
 
 		}(i)
 	}

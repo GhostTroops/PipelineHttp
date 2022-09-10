@@ -217,7 +217,7 @@ func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk fu
 
 	for _, j := range dirs {
 		if r.IsClosed {
-			break
+			return
 		}
 		select {
 		case <-r.Ctx.Done():
