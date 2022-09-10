@@ -11,8 +11,6 @@ release
 .DbCache
 scan4all_linux
 .DS_Store
-testUrls.txt
-test/testUrls.txt
 
 # Test binary, built with `go test -c`
 *.test

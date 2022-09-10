@@ -24,6 +24,10 @@ type PipelineHttp struct {
 	ExpectContinueTimeout time.Duration
 	Client                *http.Client
 	Ctx                   context.Context
+	StopAll               context.CancelFunc
+	IsClosed              bool
+	ErrLimit              int // 错误次数统计，失败就停止
+	ErrCount              int // 错误次数统计，失败就停止
 }
 
 func NewPipelineHttp() *PipelineHttp {
@@ -35,8 +39,11 @@ func NewPipelineHttp() *PipelineHttp {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		MaxIdleConnsPerHost:   3000,
-		Ctx:                   context.Background(),
+		ErrLimit:              10, // 相同目标，累计错误10次就退出
+		ErrCount:              0,
+		IsClosed:              false,
 	}
+	x1.SetCtx(context.Background())
 	//http.DefaultTransport.(*http.Transport).MaxIdleConns = x1.MaxIdleConns
 	//http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = x1.MaxIdleConnsPerHost
 	return x1
@@ -108,6 +115,9 @@ func (r *PipelineHttp) Dial(ctx context.Context, network, addr string) (net.Conn
 
 	return conn, nil
 }
+func (r *PipelineHttp) SetCtx(ctx context.Context) {
+	r.Ctx, r.StopAll = context.WithCancel(ctx)
+}
 func (r *PipelineHttp) Control(network, address string, c syscall.RawConn) error {
 	return c.Control(func(fd uintptr) {
 		err := syscall.SetsockoptInt(int(fd), syscall.IPPROTO_IP, syscall.IP_TOS, 128)
@@ -173,10 +183,18 @@ func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method
 	if resp != nil {
 		defer resp.Body.Close() // resp 可能为 nil，不能读取 Body
 	}
+	if nil != err {
+		r.ErrCount++
+	}
+	if r.ErrCount >= r.ErrLimit {
+		r.Close()
+	}
 	fnCbk(resp, err, szUrl)
 }
 
 func (r *PipelineHttp) Close() {
+	r.IsClosed = true
+	r.StopAll()
 	if nil != r.Client {
 		//r.Client
 	}
@@ -198,17 +216,37 @@ func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk fu
 	szUrl = oUrl.Scheme + "://" + oUrl.Host
 
 	for _, j := range dirs {
-		c02 <- struct{}{}
-		go func(s2 string) {
-			defer func() {
-				<-c02
-			}()
-			s2 = strings.TrimSpace(s2)
-			if !strings.HasPrefix(s2, "/") {
-				s2 = "/" + s2
+		if r.IsClosed {
+			break
+		}
+		select {
+		case <-r.Ctx.Done():
+			return
+		default:
+			{
+				c02 <- struct{}{}
+				go func(s2 string) {
+					defer func() {
+						<-c02
+					}()
+					select {
+					case <-r.Ctx.Done():
+						return
+					default:
+						{
+							s2 = strings.TrimSpace(s2)
+							if !strings.HasPrefix(s2, "/") {
+								s2 = "/" + s2
+							}
+							szUrl001 := szUrl + s2
+							r.DoGet(szUrl001, fnCbk)
+							return
+						}
+					}
+				}(j)
+				continue
 			}
-			szUrl001 := szUrl + s2
-			r.DoGet(szUrl001, fnCbk)
-		}(j)
+		}
+
 	}
 }
