@@ -3,7 +3,6 @@ package PipelineHttp
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"io"
 	"log"
 	"net"
@@ -11,7 +10,6 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -91,42 +89,29 @@ func (r *PipelineHttp) Dial(ctx context.Context, network, addr string) (net.Conn
 	conn, err := (&net.Dialer{
 		Timeout:   r.Timeout,
 		KeepAlive: r.KeepAlive,
-		Control:   r.Control,
-		DualStack: true,
+		//Control:   r.Control,
+		//DualStack: true,
 	}).DialContext(ctx, network, addr)
 	if err != nil {
 		return nil, err
 	}
 
-	tcpConn, ok := conn.(*net.TCPConn)
-	if !ok {
-		err = errors.New("conn is not tcp")
-		return nil, err
-	}
-
-	f, err := tcpConn.File()
-	if err != nil {
-		return nil, err
-	}
-
-	err = syscall.SetsockoptInt(int(f.Fd()), syscall.IPPROTO_IP, syscall.IP_TOS, 128)
-	if err != nil {
-		return nil, err
-	}
+	//tcpConn, ok := conn.(*net.TCPConn)
+	//if !ok {
+	//	err = errors.New("conn is not tcp")
+	//	return nil, err
+	//}
+	//
+	//f, err := tcpConn.File()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//internet.ApplyInboundSocketOptions("tcp", f.Fd())
 
 	return conn, nil
 }
 func (r *PipelineHttp) SetCtx(ctx context.Context) {
 	r.Ctx, r.StopAll = context.WithCancel(ctx)
-}
-func (r *PipelineHttp) Control(network, address string, c syscall.RawConn) error {
-	return c.Control(func(fd uintptr) {
-		err := syscall.SetsockoptInt(int(fd), syscall.IPPROTO_IP, syscall.IP_TOS, 128)
-		if err != nil {
-			log.Printf("control: %s", err)
-			return
-		}
-	})
 }
 
 // https://github.com/golang/go/issues/23427
