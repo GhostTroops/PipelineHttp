@@ -27,6 +27,7 @@ type PipelineHttp struct {
 	IsClosed              bool
 	ErrLimit              int // 错误次数统计，失败就停止
 	ErrCount              int // 错误次数统计，失败就停止
+	SetHeader             func() map[string]string
 }
 
 func NewPipelineHttp() *PipelineHttp {
@@ -41,6 +42,7 @@ func NewPipelineHttp() *PipelineHttp {
 		ErrLimit:              10, // 相同目标，累计错误10次就退出
 		ErrCount:              0,
 		IsClosed:              false,
+		SetHeader:             nil,
 	}
 	x1.SetCtx(context.Background())
 	//http.DefaultTransport.(*http.Transport).MaxIdleConns = x1.MaxIdleConns
@@ -159,6 +161,12 @@ func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method
 	if nil == err {
 		req.Header.Add("Connection", "keep-alive")
 		req.Close = false
+		if nil != r.SetHeader {
+			m1 := r.SetHeader()
+			for k09, v09 := range m1 {
+				req.Header.Add(k09, v09)
+			}
+		}
 	} else {
 		log.Println("http.NewRequest is error ", err)
 		return
