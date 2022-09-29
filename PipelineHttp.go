@@ -146,6 +146,9 @@ func (r *PipelineHttp) DoGet(szUrl string, fnCbk func(resp *http.Response, err e
 	r.DoGetWithClient(nil, szUrl, "GET", nil, fnCbk)
 }
 
+// application/x-www-form-urlencoded
+// multipart/form-data
+// text/plain
 func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string)) {
 	if client == nil {
 		if nil != r.Client {
