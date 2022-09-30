@@ -155,10 +155,7 @@ func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method
 			client = r.Client
 		} else {
 			client = r.GetClient()
-			r.Client = client
 		}
-	} else {
-		r.Client = client
 	}
 	req, err := http.NewRequest(method, szUrl, postBody)
 	if nil == err {
