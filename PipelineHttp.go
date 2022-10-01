@@ -1,6 +1,7 @@
 package PipelineHttp
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"io"
@@ -28,18 +29,22 @@ type PipelineHttp struct {
 	ErrLimit              int // 错误次数统计，失败就停止
 	ErrCount              int // 错误次数统计，失败就停止
 	SetHeader             func() map[string]string
+	Buf                   *bytes.Buffer // http2 client framer message
+	UseHttp2              bool
 }
 
 func NewPipelineHttp() *PipelineHttp {
 	x1 := &PipelineHttp{
-		Timeout:               30 * time.Second,
-		KeepAlive:             30 * time.Second,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		MaxIdleConnsPerHost:   3000,
-		ErrLimit:              10, // 相同目标，累计错误10次就退出
+		UseHttp2:              true,
+		Buf:                   &bytes.Buffer{},
+		Timeout:               30 * time.Second, // 拨号、连接
+		KeepAlive:             10 * time.Second, // 默认值（当前为 15 秒）发送保持活动探测。
+		MaxIdleConns:          0,                // MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit.
+		IdleConnTimeout:       0,                // 不限制
+		TLSHandshakeTimeout:   20 * time.Second, // TLSHandshakeTimeout specifies the maximum amount of time waiting to wait for a TLS handshake. Zero means no timeout.
+		ExpectContinueTimeout: 0,                // 零表示没有超时，并导致正文立即发送，无需等待服务器批准
+		MaxIdleConnsPerHost:   3000,             // MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. If zero, DefaultMaxIdleConnsPerHost is used.
+		ErrLimit:              10,               // 相同目标，累计错误10次就退出
 		ErrCount:              0,
 		IsClosed:              false,
 		SetHeader:             nil,
@@ -135,6 +140,7 @@ func (r *PipelineHttp) GetTransport() *http.Transport {
 func (r *PipelineHttp) GetClient() *http.Client {
 	c := &http.Client{
 		Transport: r.GetTransport(),
+		Timeout:   0, // 超时为零表示没有超时
 		//CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		//	return http.ErrUseLastResponse /* 不进入重定向 */
 		//},
