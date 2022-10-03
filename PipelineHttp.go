@@ -181,7 +181,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 	}
 	req, err := http.NewRequest(method, szUrl, postBody)
 	if nil == err {
-		if !r.UseHttp2 {
+		if !r.UseHttp2 && !r.TestHttp {
 			req.Header.Set("Connection", "Upgrade, HTTP2-Settings")
 			req.Header.Set("Upgrade", "h2c")
 			req.Header.Set("HTTP2-Settings", "AAMAAABkAARAAAAAAAIAAAAA")
