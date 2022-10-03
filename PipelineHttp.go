@@ -164,13 +164,17 @@ func (r *PipelineHttp) DoGet(szUrl string, fnCbk func(resp *http.Response, err e
 }
 
 func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string)) {
-	r.DoGetWithClient4SetHd(client, szUrl, method, postBody, fnCbk, nil)
+	r.DoGetWithClient4SetHd(client, szUrl, method, postBody, fnCbk, nil, true)
+}
+
+func (r *PipelineHttp) DoGetWithClient4SetHdNoCloseBody(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string), setHd func() map[string]string) {
+	r.DoGetWithClient4SetHd(client, szUrl, method, postBody, fnCbk, nil, false)
 }
 
 // application/x-www-form-urlencoded
 // multipart/form-data
 // text/plain
-func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string), setHd func() map[string]string) {
+func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string), setHd func() map[string]string, bCloseBody bool) {
 	r.testHttp2(szUrl)
 	if client == nil {
 		if nil != r.Client {
@@ -208,14 +212,14 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 	req = req.WithContext(r.Ctx)
 
 	resp, err := client.Do(req)
-	if resp != nil {
+	if bCloseBody && resp != nil {
 		defer resp.Body.Close() // resp 可能为 nil，不能读取 Body
 	}
 	if nil != err {
 		r.ErrCount++
 	}
 	if r.ErrCount >= r.ErrLimit {
-		log.Printf("%d >= %d not close\n", r.ErrCount, r.ErrLimit)
+		log.Printf("PipelineHttp %d >= %d not close\n", r.ErrCount, r.ErrLimit)
 		r.Close()
 	}
 	if nil != err && rNohost.MatchString(err.Error()) {
