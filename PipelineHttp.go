@@ -32,11 +32,13 @@ type PipelineHttp struct {
 	SetHeader             func() map[string]string
 	Buf                   *bytes.Buffer // http2 client framer message
 	UseHttp2              bool
+	TestHttp              bool
 }
 
 func NewPipelineHttp() *PipelineHttp {
 	x1 := &PipelineHttp{
 		UseHttp2:              false,
+		TestHttp:              false,
 		Buf:                   &bytes.Buffer{},
 		Timeout:               30 * time.Second, // 拨号、连接
 		KeepAlive:             10 * time.Second, // 默认值（当前为 15 秒）发送保持活动探测。
@@ -163,6 +165,7 @@ func (r *PipelineHttp) DoGet(szUrl string, fnCbk func(resp *http.Response, err e
 // multipart/form-data
 // text/plain
 func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string)) {
+	r.testHttp2(szUrl)
 	if client == nil {
 		if nil != r.Client {
 			client = r.Client
@@ -172,10 +175,12 @@ func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method
 	}
 	req, err := http.NewRequest(method, szUrl, postBody)
 	if nil == err {
-		req.Header.Set("Connection", "keep-alive")
 		if !r.UseHttp2 {
-			req.Header.Set("HTTP2-Settings", "AAMAAABKAARAAAAAAAIAAAAA")
+			req.Header.Set("Connection", "Upgrade, HTTP2-Settings")
 			req.Header.Set("Upgrade", "h2c")
+			req.Header.Set("HTTP2-Settings", "AAMAAABkAARAAAAAAAIAAAAA")
+		} else {
+			req.Header.Set("Connection", "keep-alive")
 		}
 		req.Close = false
 		if nil != r.SetHeader {
@@ -206,6 +211,10 @@ func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method
 		r.Close()
 		return
 	}
+	if !r.UseHttp2 && nil != resp && resp.StatusCode == http.StatusSwitchingProtocols {
+		r.UseHttp2 = true
+		r.Client = r.GetRawClient4Http2()
+	}
 	fnCbk(resp, err, szUrl)
 }
 
@@ -227,11 +236,12 @@ func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk fu
 }
 
 func (r *PipelineHttp) testHttp2(szUrl001 string) {
-	if !r.UseHttp2 {
+	if !r.UseHttp2 && !r.TestHttp {
+		r.TestHttp = true
 		r.UseHttp2 = true
 		c1 := r.GetRawClient4Http2()
 		r.DoGetWithClient(c1, szUrl001, "GET", nil, func(resp *http.Response, err error, szU string) {
-			if nil != resp && resp.Proto == "HTTP/2.0" {
+			if nil != resp && (resp.Proto == "HTTP/2.0" || resp.StatusCode == http.StatusSwitchingProtocols) {
 				if nil != r.Client {
 					r.Client.CloseIdleConnections()
 				}
@@ -262,7 +272,6 @@ func (r *PipelineHttp) doDirsPrivate(szUrl string, dirs []string, nThread int, f
 		client = r.GetClient4Http2()
 	} else {
 		client = r.GetClient(nil)
-		r.testHttp2(szUrl + "/test")
 		client = r.Client
 	}
 	for _, j := range dirs {
