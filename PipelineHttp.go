@@ -54,6 +54,8 @@ func NewPipelineHttp() *PipelineHttp {
 	}
 	if x1.UseHttp2 {
 		x1.Client = x1.GetClient4Http2()
+	} else {
+		x1.Client = x1.GetClient(nil)
 	}
 	x1.SetCtx(context.Background())
 	//http.DefaultTransport.(*http.Transport).MaxIdleConns = x1.MaxIdleConns
@@ -150,9 +152,9 @@ func (r *PipelineHttp) GetClient(tr http.RoundTripper) *http.Client {
 	c := &http.Client{
 		Transport: tr,
 		//Timeout:   0, // 超时为零表示没有超时
-		//CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		//	return http.ErrUseLastResponse /* 不进入重定向 */
-		//},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse /* 不进入重定向 */
+		},
 	}
 	return c
 }
