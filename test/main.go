@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 )
 
 //go:embed testUrl.txt
@@ -24,6 +25,7 @@ func main() {
 	c01 := make(chan struct{}, 4)
 	x := strings.Split(szPath, "\n")
 	var wg sync.WaitGroup
+	n009 := time.Now().UnixMilli()
 	for _, i := range a {
 		c01 <- struct{}{}
 		oUrl, err := url.Parse(i)
@@ -63,4 +65,6 @@ func main() {
 		}(i)
 	}
 	wg.Wait()
+
+	log.Printf("use time: %d sec\n", (time.Now().UnixMilli()-n009)/1000)
 }
