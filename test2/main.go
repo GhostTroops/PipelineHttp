@@ -3,8 +3,8 @@ package main
 import (
 	_ "embed"
 	xxx "github.com/hktalent/PipelineHttp"
+	"github.com/projectdiscovery/retryablehttp-go"
 	"log"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -24,6 +24,9 @@ func main() {
 	c01 := make(chan struct{}, 4)
 	x := strings.Split(szPath, "\n")
 	var wg sync.WaitGroup
+	opts := retryablehttp.DefaultOptionsSpraying
+	// opts := retryablehttp.DefaultOptionsSingle // use single options for single host
+	client := retryablehttp.NewClient(opts)
 	for _, i := range a {
 		c01 <- struct{}{}
 		oUrl, err := url.Parse(i)
@@ -41,22 +44,27 @@ func main() {
 				wg.Done()
 			}()
 			x1 := xxx.NewPipelineHttp()
-			x1.ErrLimit = 9999999
 			defer x1.Close()
 
 			log.Println("start ", s1)
-			//x1.DoDirs4Http2(s1, x, 128, func(resp *http.Response, err error, szU string) {
-			x1.DoDirs(s1, x, 128, func(resp *http.Response, err error, szU string) {
-				//if nil != err {
-				//	log.Println(err)
-				//}
-
-				if nil != resp && 200 == resp.StatusCode {
-					log.Printf("%d %s %s", resp.StatusCode, resp.Proto, szU)
-				} else if nil != resp {
-					//log.Printf("%d %s %s", resp.StatusCode, resp.Proto, szU)
+			for _, j := range x {
+				resp, err := client.Get(s1 + j)
+				if err == nil {
+					defer resp.Body.Close()
+					if nil != resp && 200 == resp.StatusCode {
+						log.Printf("%d %s %s", resp.StatusCode, resp.Proto, s1+j)
+					}
 				}
-			})
+			}
+			//
+			////x1.DoDirs4Http2(s1, x, 128, func(resp *http.Response, err error, szU string) {
+			//x1.DoDirs(s1, x, 128, func(resp *http.Response, err error, szU string) {
+			//	if nil != resp && 200 == resp.StatusCode {
+			//		log.Printf("%d %s %s", resp.StatusCode, resp.Proto, szU)
+			//	} else {
+			//		//log.Printf("%d %s", resp.StatusCode, szU)
+			//	}
+			//})
 			//time.Sleep(time.Second * 5)
 			//x1.Close()
 

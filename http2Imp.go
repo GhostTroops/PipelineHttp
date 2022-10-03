@@ -4,10 +4,9 @@ import (
 	"crypto/tls"
 	"golang.org/x/net/http2"
 	"io"
-	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
+	"time"
 )
 
 // for http2
@@ -22,19 +21,43 @@ func (w *tConn) Read(b []byte) (n int, err error) {
 	return
 }
 
-func (r *PipelineHttp) DoUrl4Http2(szUrl string, framerCbk func(*http2.Frame, *http.Response, *error)) {
+func (r *PipelineHttp) GetRawClient4Http2() *http.Client {
+	return r.GetClient(r.GetTransport4http2())
+}
+
+// get http2 client
+func (r *PipelineHttp) GetClient4Http2() *http.Client {
+	if nil == r.Client {
+		r.Client = r.GetRawClient4Http2()
+	}
+	return r.Client
+}
+
+/*
+Upgrade: h2c
+*/
+func (r *PipelineHttp) DoUrl4Http24Frame(szUrl, szMethod string, framerCbk func(*http2.Frame, *http.Response, *error) bool, w io.Writer) {
 	r.UseHttp2 = true
-	r.Client = &http.Client{Transport: r.GetTransport4http2()}
-	res, err := r.Client.Get(szUrl)
+	client := r.GetClient4Http2()
+	res, err := client.Get(szUrl)
 	if err != nil {
-		framerCbk(nil, nil, &err)
+		framerCbk(nil, res, &err)
 		return
 	}
+	//io.Copy(ioutil.Discard, res.Body)
 	defer res.Body.Close() // res.Write(os.Stdout)
-	r.httpDataIO(func(frame *http2.Frame, e *error) {
-		framerCbk(frame, res, e)
-	})
+	r.httpDataIO(func(frame *http2.Frame, e *error) bool {
+		return framerCbk(frame, res, e)
+	}, w)
 }
+
+//func (r *PipelineHttp) hdec() {
+//	hpack.NewDecoder(uint32(4<<10), func(hf hpack.HeaderField) {
+//		if hf.Name == name && hf.Value == value {
+//			matched = true
+//		}
+//	})
+//}
 
 // dialT returns a connection that writes everything that is read to w.
 func (r *PipelineHttp) dialT(w io.Writer) func(network, addr string, cfg *tls.Config) (net.Conn, error) {
@@ -43,17 +66,21 @@ func (r *PipelineHttp) dialT(w io.Writer) func(network, addr string, cfg *tls.Co
 		return &tConn{conn, w}, err
 	}
 }
-func (r *PipelineHttp) httpDataIO(framerCbk func(*http2.Frame, *error)) {
-	framer := http2.NewFramer(ioutil.Discard, r.Buf)
+func (r *PipelineHttp) httpDataIO(framerCbk func(*http2.Frame, *error) bool, w io.Writer) {
+	framer := http2.NewFramer(w, r.Buf)
 	for {
 		f, err := framer.ReadFrame()
-		framerCbk(&f, &err)
-		if err == io.EOF || err == io.ErrUnexpectedEOF {
+		if framerCbk(&f, &err) {
+			continue
+		} else {
 			break
 		}
-		if nil != err {
-			log.Println(err, framer.ErrorDetail())
-		}
+		//if err == io.EOF || err == io.ErrUnexpectedEOF {
+		//	break
+		//}
+		//if nil != err {
+		//	log.Println(err, framer.ErrorDetail())
+		//}
 		//switch err.(type) {
 		//case nil:
 		//	log.Println(f)
@@ -69,8 +96,36 @@ func (r *PipelineHttp) httpDataIO(framerCbk func(*http2.Frame, *error)) {
 // 传输对象配置
 func (r *PipelineHttp) GetTransport4http2() *http2.Transport {
 	if r.UseHttp2 {
-		tr := &http2.Transport{DialTLS: r.dialT(r.Buf)}
+		tr := &http2.Transport{
+			//TLSClientConfig: r.tlsConfig(),
+			DialTLS:                    r.dialT(r.Buf),
+			DisableCompression:         false,
+			AllowHTTP:                  true,
+			ReadIdleTimeout:            50 * time.Second,
+			PingTimeout:                15 * time.Second,
+			WriteByteTimeout:           600 * time.Second,
+			StrictMaxConcurrentStreams: true, // true 则全局复用，client时建议全局复用，false则为每一个创建一个链接
+			//DialTLS: func(netw, addr string, cfg *tls.Config) (net.Conn, error) {
+			//	return net.Dial(netw, addr)
+			//},
+		}
 		return tr
 	}
 	return nil
 }
+
+//func (r *PipelineHttp) tlsConfig() *tls.Config {
+//	crt, err := ioutil.ReadFile("./cert/public.crt")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	rootCAs := x509.NewCertPool()
+//	rootCAs.AppendCertsFromPEM(crt)
+//
+//	return &tls.Config{
+//		RootCAs:            rootCAs,
+//		InsecureSkipVerify: false,
+//		ServerName:         "localhost",
+//	}
+//}

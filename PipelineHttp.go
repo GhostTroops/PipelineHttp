@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -35,7 +36,7 @@ type PipelineHttp struct {
 
 func NewPipelineHttp() *PipelineHttp {
 	x1 := &PipelineHttp{
-		UseHttp2:              true,
+		UseHttp2:              false,
 		Buf:                   &bytes.Buffer{},
 		Timeout:               30 * time.Second, // 拨号、连接
 		KeepAlive:             10 * time.Second, // 默认值（当前为 15 秒）发送保持活动探测。
@@ -48,6 +49,9 @@ func NewPipelineHttp() *PipelineHttp {
 		ErrCount:              0,
 		IsClosed:              false,
 		SetHeader:             nil,
+	}
+	if x1.UseHttp2 {
+		x1.Client = x1.GetClient4Http2()
 	}
 	x1.SetCtx(context.Background())
 	//http.DefaultTransport.(*http.Transport).MaxIdleConns = x1.MaxIdleConns
@@ -137,10 +141,13 @@ func (r *PipelineHttp) GetTransport() *http.Transport {
 	return tr
 }
 
-func (r *PipelineHttp) GetClient() *http.Client {
+func (r *PipelineHttp) GetClient(tr http.RoundTripper) *http.Client {
+	if nil == tr {
+		tr = r.GetTransport()
+	}
 	c := &http.Client{
-		Transport: r.GetTransport(),
-		Timeout:   0, // 超时为零表示没有超时
+		Transport: tr,
+		//Timeout:   0, // 超时为零表示没有超时
 		//CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		//	return http.ErrUseLastResponse /* 不进入重定向 */
 		//},
@@ -160,17 +167,21 @@ func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method
 		if nil != r.Client {
 			client = r.Client
 		} else {
-			client = r.GetClient()
+			client = r.GetClient(nil)
 		}
 	}
 	req, err := http.NewRequest(method, szUrl, postBody)
 	if nil == err {
-		req.Header.Add("Connection", "keep-alive")
+		req.Header.Set("Connection", "keep-alive")
+		if !r.UseHttp2 {
+			req.Header.Set("HTTP2-Settings", "AAMAAABKAARAAAAAAAIAAAAA")
+			req.Header.Set("Upgrade", "h2c")
+		}
 		req.Close = false
 		if nil != r.SetHeader {
 			m1 := r.SetHeader()
 			for k09, v09 := range m1 {
-				req.Header.Add(k09, v09)
+				req.Header.Set(k09, v09)
 			}
 		}
 	} else {
@@ -187,22 +198,53 @@ func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method
 		r.ErrCount++
 	}
 	if r.ErrCount >= r.ErrLimit {
+		log.Printf("%d >= %d not close\n", r.ErrCount, r.ErrLimit)
 		r.Close()
+	}
+	if nil != err && rNohost.MatchString(err.Error()) {
+		log.Println(err)
+		r.Close()
+		return
 	}
 	fnCbk(resp, err, szUrl)
 }
 
+var rNohost = regexp.MustCompile(`.*dial tcp: [^:]+: no such host.*`)
+
 func (r *PipelineHttp) Close() {
 	r.IsClosed = true
 	r.StopAll()
-	if nil != r.Client {
-		//r.Client
-	}
 	r.Client = nil
 }
 
-// more see test/main.go
+func (r *PipelineHttp) DoDirs4Http2(szUrl string, dirs []string, nThread int, fnCbk func(resp *http.Response, err error, szU string)) {
+	r.UseHttp2 = true
+	r.doDirsPrivate(szUrl, dirs, nThread, fnCbk)
+}
+
 func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk func(resp *http.Response, err error, szU string)) {
+	r.doDirsPrivate(szUrl, dirs, nThread, fnCbk)
+}
+
+func (r *PipelineHttp) testHttp2(szUrl001 string) {
+	if !r.UseHttp2 {
+		r.UseHttp2 = true
+		c1 := r.GetRawClient4Http2()
+		r.DoGetWithClient(c1, szUrl001, "GET", nil, func(resp *http.Response, err error, szU string) {
+			if nil != resp && resp.Proto == "HTTP/2.0" {
+				if nil != r.Client {
+					r.Client.CloseIdleConnections()
+				}
+				r.Client = c1
+			} else {
+				r.UseHttp2 = false
+			}
+		})
+	}
+}
+
+// more see test/main.go
+func (r *PipelineHttp) doDirsPrivate(szUrl string, dirs []string, nThread int, fnCbk func(resp *http.Response, err error, szU string)) {
 	c02 := make(chan struct{}, nThread)
 	defer close(c02)
 	oUrl, err := url.Parse(szUrl)
@@ -215,6 +257,14 @@ func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk fu
 	}
 	szUrl = oUrl.Scheme + "://" + oUrl.Host
 	var wg sync.WaitGroup
+	var client *http.Client
+	if r.UseHttp2 {
+		client = r.GetClient4Http2()
+	} else {
+		client = r.GetClient(nil)
+		r.testHttp2(szUrl + "/test")
+		client = r.Client
+	}
 	for _, j := range dirs {
 		if r.IsClosed {
 			return
@@ -241,7 +291,8 @@ func (r *PipelineHttp) DoDirs(szUrl string, dirs []string, nThread int, fnCbk fu
 								s2 = "/" + s2
 							}
 							szUrl001 := szUrl + s2
-							r.DoGet(szUrl001, fnCbk)
+							r.DoGetWithClient(client, szUrl001, "GET", nil, fnCbk)
+							//r.DoGet(szUrl001, fnCbk)
 							return
 						}
 					}
