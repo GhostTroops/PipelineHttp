@@ -161,10 +161,14 @@ func (r *PipelineHttp) DoGet(szUrl string, fnCbk func(resp *http.Response, err e
 	r.DoGetWithClient(nil, szUrl, "GET", nil, fnCbk)
 }
 
+func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string)) {
+	r.DoGetWithClient4SetHd(client, szUrl, method, postBody, fnCbk, nil)
+}
+
 // application/x-www-form-urlencoded
 // multipart/form-data
 // text/plain
-func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string)) {
+func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string), setHd func() map[string]string) {
 	r.testHttp2(szUrl)
 	if client == nil {
 		if nil != r.Client {
@@ -183,8 +187,14 @@ func (r *PipelineHttp) DoGetWithClient(client *http.Client, szUrl string, method
 			req.Header.Set("Connection", "keep-alive")
 		}
 		req.Close = false
-		if nil != r.SetHeader {
-			m1 := r.SetHeader()
+		var fnShk func() map[string]string
+		if nil != setHd {
+			fnShk = setHd
+		} else {
+			fnShk = r.SetHeader
+		}
+		if nil != fnShk {
+			m1 := fnShk()
 			for k09, v09 := range m1 {
 				req.Header.Set(k09, v09)
 			}
