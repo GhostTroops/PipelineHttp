@@ -256,7 +256,9 @@ func (r *PipelineHttp) testHttp2(szUrl001 string) {
 		r.TestHttp = true
 		r.UseHttp2 = true
 		c1 := r.GetRawClient4Http2()
-		r.DoGetWithClient(c1, szUrl001, "GET", nil, func(resp *http.Response, err error, szU string) {
+		oU7, _ := url.Parse(szUrl001)
+		szUrl09 := "https://" + oU7.Host + oU7.Path
+		r.DoGetWithClient(c1, szUrl09, "GET", nil, func(resp *http.Response, err error, szU string) {
 			if nil != resp && (resp.Proto == "HTTP/2.0" || resp.StatusCode == http.StatusSwitchingProtocols) {
 				if nil != r.Client {
 					r.Client.CloseIdleConnections()
