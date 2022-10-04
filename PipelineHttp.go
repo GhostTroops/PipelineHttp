@@ -213,7 +213,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 	if 0 == n1 {
 		n1 = 10
 	}
-	ctx, cc := context.WithDeadline(r.Ctx, time.Now().Add(n1))
+	ctx, cc := context.WithTimeout(r.Ctx, n1*r.Timeout)
 	defer cc()
 	req = req.WithContext(ctx)
 
