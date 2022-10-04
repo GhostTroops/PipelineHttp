@@ -209,7 +209,13 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 		log.Println("http.NewRequest is error ", err)
 		return
 	}
-	req = req.WithContext(r.Ctx)
+	n1 := client.Timeout
+	if 0 == n1 {
+		n1 = 10
+	}
+	ctx, cc := context.WithDeadline(r.Ctx, time.Now().Add(n1))
+	defer cc()
+	req = req.WithContext(ctx)
 
 	resp, err := client.Do(req)
 	if bCloseBody && resp != nil {
