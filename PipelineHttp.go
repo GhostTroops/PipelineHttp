@@ -175,7 +175,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHdNoCloseBody(client *http.Client, szU
 // multipart/form-data
 // text/plain
 func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, method string, postBody io.Reader, fnCbk func(resp *http.Response, err error, szU string), setHd func() map[string]string, bCloseBody bool) {
-	r.testHttp2(szUrl)
+	//r.testHttp2(szUrl)
 	if client == nil {
 		if nil != r.Client {
 			client = r.Client
