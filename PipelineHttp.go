@@ -130,8 +130,8 @@ func (r *PipelineHttp) SetCtx(ctx context.Context) {
 }
 
 // https://github.com/golang/go/issues/23427
-func (r *PipelineHttp) GetTransport() *http.Transport {
-	tr := &http.Transport{
+func (r *PipelineHttp) GetTransport() http.RoundTripper {
+	var tr http.RoundTripper = &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
 		DialContext:           r.Dial,
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
