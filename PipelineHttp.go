@@ -236,6 +236,8 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 	if !r.UseHttp2 && nil != resp && resp.StatusCode == http.StatusSwitchingProtocols {
 		r.UseHttp2 = true
 		r.Client = r.GetRawClient4Http2()
+		r.DoGetWithClient4SetHd(r.Client, szUrl, method, postBody, fnCbk, setHd, bCloseBody)
+		return
 	}
 	fnCbk(resp, err, szUrl)
 }
