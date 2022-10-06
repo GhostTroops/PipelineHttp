@@ -103,17 +103,19 @@ func (r *PipelineHttp) SetCtx(ctx context.Context) {
 // https://www.jianshu.com/p/2e5a7317be38
 func (r *PipelineHttp) GetTransport() http.RoundTripper {
 	var tr http.RoundTripper = &http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
-		DialContext:           r.Dial,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
-		DisableKeepAlives:     false,                   // false 才会复用连接 https://blog.csdn.net/qq_21514303/article/details/87794750
-		MaxIdleConns:          r.MaxIdleConns,          // 是长连接在关闭之前，连接池对所有host的最大链接数量
-		IdleConnTimeout:       r.IdleConnTimeout,       // 连接最大空闲时间，超过这个时间就会被关闭
-		TLSHandshakeTimeout:   r.TLSHandshakeTimeout,   // 限制TLS握手使用的时间
-		ExpectContinueTimeout: r.ExpectContinueTimeout, // 限制客户端在发送一个包含：100-continue的http报文头后，等待收到一个go-ahead响应报文所用的时间。在1.6中，此设置对HTTP/2无效。（在1.6.2中提供了一个特定的封装DefaultTransport）
-		MaxIdleConnsPerHost:   r.MaxIdleConnsPerHost,   // 连接池对每个host的最大链接数量(MaxIdleConnsPerHost <= MaxIdleConns,如果客户端只需要访问一个host，那么最好将MaxIdleConnsPerHost与MaxIdleConns设置为相同，这样逻辑更加清晰)
-		MaxConnsPerHost:       r.MaxConnsPerHost,
-		ResponseHeaderTimeout: r.ResponseHeaderTimeout, // 限制读取响应报文头使用的时间
+		Proxy:                  http.ProxyFromEnvironment,
+		DialContext:            r.Dial,
+		TLSClientConfig:        &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10, Renegotiation: tls.RenegotiateOnceAsClient},
+		ForceAttemptHTTP2:      true,
+		MaxResponseHeaderBytes: 4096,                    //net/http default is 10Mb
+		DisableKeepAlives:      false,                   // false 才会复用连接 https://blog.csdn.net/qq_21514303/article/details/87794750
+		MaxIdleConns:           r.MaxIdleConns,          // 是长连接在关闭之前，连接池对所有host的最大链接数量
+		IdleConnTimeout:        r.IdleConnTimeout,       // 连接最大空闲时间，超过这个时间就会被关闭
+		TLSHandshakeTimeout:    r.TLSHandshakeTimeout,   // 限制TLS握手使用的时间
+		ExpectContinueTimeout:  r.ExpectContinueTimeout, // 限制客户端在发送一个包含：100-continue的http报文头后，等待收到一个go-ahead响应报文所用的时间。在1.6中，此设置对HTTP/2无效。（在1.6.2中提供了一个特定的封装DefaultTransport）
+		MaxIdleConnsPerHost:    r.MaxIdleConnsPerHost,   // 连接池对每个host的最大链接数量(MaxIdleConnsPerHost <= MaxIdleConns,如果客户端只需要访问一个host，那么最好将MaxIdleConnsPerHost与MaxIdleConns设置为相同，这样逻辑更加清晰)
+		MaxConnsPerHost:        r.MaxConnsPerHost,
+		ResponseHeaderTimeout:  r.ResponseHeaderTimeout, // 限制读取响应报文头使用的时间
 	}
 	return tr
 }
