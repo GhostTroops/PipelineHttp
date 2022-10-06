@@ -251,7 +251,9 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 		}
 		r.UseHttp2 = true
 		r.Client = r.GetRawClient4Http2()
-		r.DoGetWithClient4SetHd(r.Client, szUrl, method, postBody, fnCbk, setHd, bCloseBody)
+		oU7, _ := url.Parse(szUrl)
+		szUrl09 := "https://" + oU7.Host + oU7.Path
+		r.DoGetWithClient4SetHd(r.Client, szUrl09, method, postBody, fnCbk, setHd, bCloseBody)
 		return
 	}
 	fnCbk(resp, err, szUrl)
