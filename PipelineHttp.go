@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -16,38 +17,38 @@ import (
 )
 
 type PipelineHttp struct {
-	Timeout               time.Duration
-	KeepAlive             time.Duration
-	MaxIdleConns          int
-	MaxIdleConnsPerHost   int
-	IdleConnTimeout       time.Duration
-	TLSHandshakeTimeout   time.Duration
-	ExpectContinueTimeout time.Duration
-	Client                *http.Client
-	Ctx                   context.Context
-	StopAll               context.CancelFunc
-	IsClosed              bool
-	ErrLimit              int // 错误次数统计，失败就停止
-	ErrCount              int // 错误次数统计，失败就停止
-	SetHeader             func() map[string]string
-	Buf                   *bytes.Buffer // http2 client framer message
-	UseHttp2              bool
-	TestHttp              bool
+	Timeout               time.Duration            `json:"timeout"`
+	KeepAlive             time.Duration            `json:"keep_alive"`
+	MaxIdleConns          int                      `json:"max_idle_conns"`
+	MaxIdleConnsPerHost   int                      `json:"max_idle_conns_per_host"`
+	IdleConnTimeout       time.Duration            `json:"idle_conn_timeout"`
+	TLSHandshakeTimeout   time.Duration            `json:"tls_handshake_timeout"`
+	ExpectContinueTimeout time.Duration            `json:"expect_continue_timeout"`
+	Client                *http.Client             `json:"client"`
+	Ctx                   context.Context          `json:"ctx"`
+	StopAll               context.CancelFunc       `json:"stop_all"`
+	IsClosed              bool                     `json:"is_closed"`
+	ErrLimit              int                      `json:"err_limit"` // 错误次数统计，失败就停止
+	ErrCount              int                      `json:"err_count"` // 错误次数统计，失败就停止
+	SetHeader             func() map[string]string `json:"set_header"`
+	Buf                   *bytes.Buffer            `json:"buf"` // http2 client framer message
+	UseHttp2              bool                     `json:"use_http_2"`
+	TestHttp              bool                     `json:"test_http"`
 }
 
-func NewPipelineHttp() *PipelineHttp {
+func NewPipelineHttp(args ...map[string]interface{}) *PipelineHttp {
 	x1 := &PipelineHttp{
 		UseHttp2:              false,
 		TestHttp:              false,
 		Buf:                   &bytes.Buffer{},
-		Timeout:               30 * time.Second, // 拨号、连接
-		KeepAlive:             10 * time.Second, // 默认值（当前为 15 秒）发送保持活动探测。
-		MaxIdleConns:          100,              // MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit.
-		IdleConnTimeout:       180,              // 不限制
-		TLSHandshakeTimeout:   60 * time.Second, // TLSHandshakeTimeout specifies the maximum amount of time waiting to wait for a TLS handshake. Zero means no timeout.
-		ExpectContinueTimeout: 60,               // 零表示没有超时，并导致正文立即发送，无需等待服务器批准
-		MaxIdleConnsPerHost:   3000,             // MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. If zero, DefaultMaxIdleConnsPerHost is used.
-		ErrLimit:              10,               // 相同目标，累计错误10次就退出
+		Timeout:               60 * time.Second,      // 拨号、连接
+		KeepAlive:             60 * 60 * time.Second, // 默认值（当前为 15 秒）发送保持活动探测。
+		MaxIdleConns:          100,                   // MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit.
+		IdleConnTimeout:       180,                   // 不限制
+		TLSHandshakeTimeout:   60 * time.Second,      // TLSHandshakeTimeout specifies the maximum amount of time waiting to wait for a TLS handshake. Zero means no timeout.
+		ExpectContinueTimeout: 60,                    // 零表示没有超时，并导致正文立即发送，无需等待服务器批准
+		MaxIdleConnsPerHost:   3000,                  // MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. If zero, DefaultMaxIdleConnsPerHost is used.
+		ErrLimit:              10,                    // 相同目标，累计错误10次就退出
 		ErrCount:              0,
 		IsClosed:              false,
 		SetHeader:             nil,
@@ -58,6 +59,13 @@ func NewPipelineHttp() *PipelineHttp {
 		x1.Client = x1.GetClient(nil)
 	}
 	x1.SetCtx(context.Background())
+	if nil != args && 0 < len(args) {
+		for _, x := range args {
+			if data, err := json.Marshal(x); nil == err {
+				json.Unmarshal(data, x1)
+			}
+		}
+	}
 	//http.DefaultTransport.(*http.Transport).MaxIdleConns = x1.MaxIdleConns
 	//http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = x1.MaxIdleConnsPerHost
 	return x1
@@ -132,15 +140,15 @@ func (r *PipelineHttp) SetCtx(ctx context.Context) {
 // https://github.com/golang/go/issues/23427
 func (r *PipelineHttp) GetTransport() http.RoundTripper {
 	var tr http.RoundTripper = &http.Transport{
-		Proxy:           http.ProxyFromEnvironment,
-		DialContext:     r.Dial,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
-		//DisableKeepAlives:     false,
-		//MaxIdleConns:          r.MaxIdleConns,
-		//IdleConnTimeout:       r.IdleConnTimeout,
-		//TLSHandshakeTimeout:   r.TLSHandshakeTimeout,
-		//ExpectContinueTimeout: r.ExpectContinueTimeout,
-		//MaxIdleConnsPerHost:   r.MaxIdleConnsPerHost,
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           r.Dial,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
+		DisableKeepAlives:     false,
+		MaxIdleConns:          r.MaxIdleConns,
+		IdleConnTimeout:       r.IdleConnTimeout,
+		TLSHandshakeTimeout:   r.TLSHandshakeTimeout,
+		ExpectContinueTimeout: r.ExpectContinueTimeout,
+		MaxIdleConnsPerHost:   r.MaxIdleConnsPerHost,
 	}
 	return tr
 }
