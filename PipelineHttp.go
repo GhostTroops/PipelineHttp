@@ -25,6 +25,7 @@ type PipelineHttp struct {
 	IdleConnTimeout       time.Duration            `json:"idle_conn_timeout"`
 	TLSHandshakeTimeout   time.Duration            `json:"tls_handshake_timeout"`
 	ExpectContinueTimeout time.Duration            `json:"expect_continue_timeout"`
+	ResponseHeaderTimeout time.Duration            `json:"response_header_timeout"`
 	Client                *http.Client             `json:"client"`
 	Ctx                   context.Context          `json:"ctx"`
 	StopAll               context.CancelFunc       `json:"stop_all"`
@@ -47,6 +48,7 @@ func NewPipelineHttp(args ...map[string]interface{}) *PipelineHttp {
 		KeepAlive:             60 * 60 * time.Second, // 默认值（当前为 15 秒）发送保持活动探测。
 		MaxIdleConns:          500,                   // MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit.
 		IdleConnTimeout:       180,                   // 不限制
+		ResponseHeaderTimeout: 60 * time.Second,      // response
 		TLSHandshakeTimeout:   60 * time.Second,      // TLSHandshakeTimeout specifies the maximum amount of time waiting to wait for a TLS handshake. Zero means no timeout.
 		ExpectContinueTimeout: 60,                    // 零表示没有超时，并导致正文立即发送，无需等待服务器批准
 		MaxIdleConnsPerHost:   500,                   // MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. If zero, DefaultMaxIdleConnsPerHost is used.
@@ -75,43 +77,6 @@ func NewPipelineHttp(args ...map[string]interface{}) *PipelineHttp {
 	return x1
 }
 
-/*
-	if err != nil {
-	    return nil, err
-	}
-
-	sa := &syscall.SockaddrInet4{
-	    Port: tcpAddr.Port,
-	    Addr: [4]byte{tcpAddr.IP[0], tcpAddr.IP[1], tcpAddr.IP[2], tcpAddr.IP[3]},
-	}
-
-fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
-
-	if err != nil {
-	    return nil, err
-	}
-
-err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IP, syscall.IP_TOS, 128)
-
-	if err != nil {
-	    return nil, err
-	}
-
-err = syscall.Connect(fd, sa)
-
-	if err != nil {
-	    return nil, err
-	}
-
-file := os.NewFile(uintptr(fd), "")
-conn, err := net.FileConn(file)
-
-	if err != nil {
-	    return nil, err
-	}
-
-return conn, nil
-*/
 // https://cloud.tencent.com/developer/article/1529840
 func (r *PipelineHttp) Dial(ctx context.Context, network, addr string) (conn net.Conn, err error) {
 	for i := 0; i < r.ReTry; i++ {
@@ -139,13 +104,14 @@ func (r *PipelineHttp) GetTransport() http.RoundTripper {
 		Proxy:                 http.ProxyFromEnvironment,
 		DialContext:           r.Dial,
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
-		DisableKeepAlives:     false,
-		MaxIdleConns:          r.MaxIdleConns,
-		IdleConnTimeout:       r.IdleConnTimeout,
-		TLSHandshakeTimeout:   r.TLSHandshakeTimeout,
-		ExpectContinueTimeout: r.ExpectContinueTimeout,
-		MaxIdleConnsPerHost:   r.MaxIdleConnsPerHost,
+		DisableKeepAlives:     true,
+		MaxIdleConns:          r.MaxIdleConns,          // 是长连接在关闭之前，连接池对所有host的最大链接数量
+		IdleConnTimeout:       r.IdleConnTimeout,       // 连接最大空闲时间，超过这个时间就会被关闭
+		TLSHandshakeTimeout:   r.TLSHandshakeTimeout,   // 限制TLS握手使用的时间
+		ExpectContinueTimeout: r.ExpectContinueTimeout, // 限制客户端在发送一个包含：100-continue的http报文头后，等待收到一个go-ahead响应报文所用的时间。在1.6中，此设置对HTTP/2无效。（在1.6.2中提供了一个特定的封装DefaultTransport）
+		MaxIdleConnsPerHost:   r.MaxIdleConnsPerHost,   // 连接池对每个host的最大链接数量(MaxIdleConnsPerHost <= MaxIdleConns,如果客户端只需要访问一个host，那么最好将MaxIdleConnsPerHost与MaxIdleConns设置为相同，这样逻辑更加清晰)
 		MaxConnsPerHost:       r.MaxConnsPerHost,
+		ResponseHeaderTimeout: r.ResponseHeaderTimeout, // 限制读取响应报文头使用的时间
 	}
 	return tr
 }
@@ -156,7 +122,7 @@ func (r *PipelineHttp) GetClient(tr http.RoundTripper) *http.Client {
 	}
 	c := &http.Client{
 		Transport: tr,
-		//Timeout:   0, // 超时为零表示没有超时
+		Timeout:   r.Timeout, // 超时为零表示没有超时
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse /* 不进入重定向 */
 		},
@@ -197,7 +163,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 	}
 	req, err := http.NewRequest(method, szUrl, postBody)
 	if nil == err {
-		if !r.UseHttp2 && !r.TestHttp {
+		if !r.UseHttp2 && !r.TestHttp && strings.HasPrefix(szUrl, "https://") {
 			req.Header.Set("Connection", "Upgrade, HTTP2-Settings")
 			req.Header.Set("Upgrade", "h2c")
 			req.Header.Set("HTTP2-Settings", "AAMAAABkAARAAAAAAAIAAAAA")
