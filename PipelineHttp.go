@@ -235,6 +235,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 	}
 	if !r.UseHttp2 && nil != resp && resp.StatusCode == http.StatusSwitchingProtocols {
 		if resp != nil {
+			io.Copy(io.Discard, resp.Body)
 			resp.Body.Close() // resp 可能为 nil，不能读取 Body
 		}
 		r.UseHttp2 = true
