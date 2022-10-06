@@ -270,7 +270,9 @@ func (r *PipelineHttp) testHttp2(szUrl001 string) {
 		oU7, _ := url.Parse(szUrl001)
 		szUrl09 := "https://" + oU7.Host + oU7.Path
 		r.DoGetWithClient(c1, szUrl09, "GET", nil, func(resp *http.Response, err error, szU string) {
-			if nil != resp && (resp.Proto == "HTTP/2.0" || resp.StatusCode == http.StatusSwitchingProtocols) {
+			if nil != resp && (strings.HasPrefix(resp.Proto, "HTTP/2") || strings.HasPrefix(resp.Proto, "HTTP/3") || resp.StatusCode == http.StatusSwitchingProtocols) {
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
 				if nil != r.Client {
 					r.Client.CloseIdleConnections()
 				}
