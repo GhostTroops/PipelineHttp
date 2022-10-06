@@ -125,19 +125,7 @@ func (r *PipelineHttp) Dial(ctx context.Context, network, addr string) (conn net
 			break
 		}
 	}
-	//tcpConn, ok := conn.(*net.TCPConn)
-	//if !ok {
-	//	err = errors.New("conn is not tcp")
-	//	return nil, err
-	//}
-	//
-	//f, err := tcpConn.File()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//internet.ApplyInboundSocketOptions("tcp", f.Fd())
-
-	return conn, nil
+	return conn, err
 }
 func (r *PipelineHttp) SetCtx(ctx context.Context) {
 	r.Ctx, r.StopAll = context.WithCancel(ctx)
