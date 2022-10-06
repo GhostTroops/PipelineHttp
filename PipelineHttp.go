@@ -21,6 +21,7 @@ type PipelineHttp struct {
 	KeepAlive             time.Duration            `json:"keep_alive"`
 	MaxIdleConns          int                      `json:"max_idle_conns"`
 	MaxIdleConnsPerHost   int                      `json:"max_idle_conns_per_host"`
+	MaxConnsPerHost       int                      `json:"max_conns_per_host"`
 	IdleConnTimeout       time.Duration            `json:"idle_conn_timeout"`
 	TLSHandshakeTimeout   time.Duration            `json:"tls_handshake_timeout"`
 	ExpectContinueTimeout time.Duration            `json:"expect_continue_timeout"`
@@ -43,11 +44,12 @@ func NewPipelineHttp(args ...map[string]interface{}) *PipelineHttp {
 		Buf:                   &bytes.Buffer{},
 		Timeout:               60 * time.Second,      // 拨号、连接
 		KeepAlive:             60 * 60 * time.Second, // 默认值（当前为 15 秒）发送保持活动探测。
-		MaxIdleConns:          100,                   // MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit.
+		MaxIdleConns:          500,                   // MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit.
 		IdleConnTimeout:       180,                   // 不限制
 		TLSHandshakeTimeout:   60 * time.Second,      // TLSHandshakeTimeout specifies the maximum amount of time waiting to wait for a TLS handshake. Zero means no timeout.
 		ExpectContinueTimeout: 60,                    // 零表示没有超时，并导致正文立即发送，无需等待服务器批准
-		MaxIdleConnsPerHost:   3000,                  // MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. If zero, DefaultMaxIdleConnsPerHost is used.
+		MaxIdleConnsPerHost:   500,                   // MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. If zero, DefaultMaxIdleConnsPerHost is used.
+		MaxConnsPerHost:       500,                   //
 		ErrLimit:              10,                    // 相同目标，累计错误10次就退出
 		ErrCount:              0,
 		IsClosed:              false,
@@ -108,12 +110,13 @@ conn, err := net.FileConn(file)
 
 return conn, nil
 */
+// https://cloud.tencent.com/developer/article/1529840
 func (r *PipelineHttp) Dial(ctx context.Context, network, addr string) (net.Conn, error) {
 	conn, err := (&net.Dialer{
 		Timeout:   r.Timeout,
 		KeepAlive: r.KeepAlive,
 		//Control:   r.Control,
-		//DualStack: true,
+		DualStack: true,
 	}).DialContext(ctx, network, addr)
 	if err != nil {
 		return nil, err
@@ -138,6 +141,8 @@ func (r *PipelineHttp) SetCtx(ctx context.Context) {
 }
 
 // https://github.com/golang/go/issues/23427
+// https://cloud.tencent.com/developer/article/1529840
+// https://romatic.net/post/go_net_errors/
 func (r *PipelineHttp) GetTransport() http.RoundTripper {
 	var tr http.RoundTripper = &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
@@ -149,6 +154,7 @@ func (r *PipelineHttp) GetTransport() http.RoundTripper {
 		TLSHandshakeTimeout:   r.TLSHandshakeTimeout,
 		ExpectContinueTimeout: r.ExpectContinueTimeout,
 		MaxIdleConnsPerHost:   r.MaxIdleConnsPerHost,
+		MaxConnsPerHost:       r.MaxConnsPerHost,
 	}
 	return tr
 }
