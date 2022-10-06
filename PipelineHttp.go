@@ -192,7 +192,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 		} else {
 			req.Header.Set("Connection", "keep-alive")
 		}
-		req.Close = true // 避免 Read返回EOF error
+		//req.Close = true // 避免 Read返回EOF error
 		var fnShk func() map[string]string
 		if nil != setHd {
 			fnShk = setHd
@@ -229,7 +229,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 		r.Close()
 	}
 	if nil != err && rNohost.MatchString(err.Error()) {
-		log.Println(err)
+		log.Println(szUrl, err)
 		r.Close()
 		return
 	}
