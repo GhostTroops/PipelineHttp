@@ -43,7 +43,7 @@ func main() {
 				wg.Done()
 			}()
 			x1 := xxx.NewPipelineHttp()
-			x1.ErrLimit = 9999999
+			//x1.ErrLimit = 9999999
 			defer x1.Close()
 
 			log.Println("start ", s1)

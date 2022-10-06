@@ -78,6 +78,7 @@ func NewPipelineHttp(args ...map[string]interface{}) *PipelineHttp {
 }
 
 // https://cloud.tencent.com/developer/article/1529840
+// https://zhuanlan.zhihu.com/p/451642373
 func (r *PipelineHttp) Dial(ctx context.Context, network, addr string) (conn net.Conn, err error) {
 	for i := 0; i < r.ReTry; i++ {
 		conn, err = (&net.Dialer{
@@ -99,12 +100,13 @@ func (r *PipelineHttp) SetCtx(ctx context.Context) {
 // https://github.com/golang/go/issues/23427
 // https://cloud.tencent.com/developer/article/1529840
 // https://romatic.net/post/go_net_errors/
+// https://www.jianshu.com/p/2e5a7317be38
 func (r *PipelineHttp) GetTransport() http.RoundTripper {
 	var tr http.RoundTripper = &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
 		DialContext:           r.Dial,
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
-		DisableKeepAlives:     true,
+		DisableKeepAlives:     false,                   // false 才会复用连接
 		MaxIdleConns:          r.MaxIdleConns,          // 是长连接在关闭之前，连接池对所有host的最大链接数量
 		IdleConnTimeout:       r.IdleConnTimeout,       // 连接最大空闲时间，超过这个时间就会被关闭
 		TLSHandshakeTimeout:   r.TLSHandshakeTimeout,   // 限制TLS握手使用的时间
@@ -219,6 +221,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 		r.Client = r.GetRawClient4Http2()
 		oU7, _ := url.Parse(szUrl)
 		szUrl09 := "https://" + oU7.Host + oU7.Path
+		r.ErrLimit = 99999999
 		r.DoGetWithClient4SetHd(r.Client, szUrl09, method, postBody, fnCbk, setHd, bCloseBody)
 		return
 	}
@@ -256,6 +259,7 @@ func (r *PipelineHttp) testHttp2(szUrl001 string) {
 					r.Client.CloseIdleConnections()
 				}
 				r.Client = c1
+				r.ErrLimit = 99999999
 			} else {
 				r.UseHttp2 = false
 			}
@@ -278,6 +282,7 @@ func (r *PipelineHttp) doDirsPrivate(szUrl string, dirs []string, nThread int, f
 	szUrl = oUrl.Scheme + "://" + oUrl.Host
 	var wg sync.WaitGroup
 	var client *http.Client
+	r.testHttp2(szUrl)
 	if r.UseHttp2 {
 		client = r.GetClient4Http2()
 	} else {
