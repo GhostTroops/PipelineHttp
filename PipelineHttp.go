@@ -35,6 +35,7 @@ type PipelineHttp struct {
 	Buf                   *bytes.Buffer            `json:"buf"` // http2 client framer message
 	UseHttp2              bool                     `json:"use_http_2"`
 	TestHttp              bool                     `json:"test_http"`
+	ReTry                 int                      `json:"re_try"` // 连接超时重试
 }
 
 func NewPipelineHttp(args ...map[string]interface{}) *PipelineHttp {
@@ -54,6 +55,7 @@ func NewPipelineHttp(args ...map[string]interface{}) *PipelineHttp {
 		ErrCount:              0,
 		IsClosed:              false,
 		SetHeader:             nil,
+		ReTry:                 3,
 	}
 	if x1.UseHttp2 {
 		x1.Client = x1.GetClient4Http2()
@@ -111,17 +113,18 @@ conn, err := net.FileConn(file)
 return conn, nil
 */
 // https://cloud.tencent.com/developer/article/1529840
-func (r *PipelineHttp) Dial(ctx context.Context, network, addr string) (net.Conn, error) {
-	conn, err := (&net.Dialer{
-		Timeout:   r.Timeout,
-		KeepAlive: r.KeepAlive,
-		//Control:   r.Control,
-		DualStack: true,
-	}).DialContext(ctx, network, addr)
-	if err != nil {
-		return nil, err
+func (r *PipelineHttp) Dial(ctx context.Context, network, addr string) (conn net.Conn, err error) {
+	for i := 0; i < r.ReTry; i++ {
+		conn, err = (&net.Dialer{
+			Timeout:   r.Timeout,
+			KeepAlive: r.KeepAlive,
+			//Control:   r.Control,
+			DualStack: true,
+		}).DialContext(ctx, network, addr)
+		if err == nil {
+			break
+		}
 	}
-
 	//tcpConn, ok := conn.(*net.TCPConn)
 	//if !ok {
 	//	err = errors.New("conn is not tcp")
