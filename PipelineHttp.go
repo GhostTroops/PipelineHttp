@@ -106,7 +106,7 @@ func (r *PipelineHttp) GetTransport() http.RoundTripper {
 		Proxy:                 http.ProxyFromEnvironment,
 		DialContext:           r.Dial,
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
-		DisableKeepAlives:     false,                   // false 才会复用连接
+		DisableKeepAlives:     false,                   // false 才会复用连接 https://blog.csdn.net/qq_21514303/article/details/87794750
 		MaxIdleConns:          r.MaxIdleConns,          // 是长连接在关闭之前，连接池对所有host的最大链接数量
 		IdleConnTimeout:       r.IdleConnTimeout,       // 连接最大空闲时间，超过这个时间就会被关闭
 		TLSHandshakeTimeout:   r.TLSHandshakeTimeout,   // 限制TLS握手使用的时间
