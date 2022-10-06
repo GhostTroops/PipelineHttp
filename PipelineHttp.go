@@ -42,10 +42,10 @@ func NewPipelineHttp() *PipelineHttp {
 		Buf:                   &bytes.Buffer{},
 		Timeout:               30 * time.Second, // 拨号、连接
 		KeepAlive:             10 * time.Second, // 默认值（当前为 15 秒）发送保持活动探测。
-		MaxIdleConns:          0,                // MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit.
-		IdleConnTimeout:       0,                // 不限制
-		TLSHandshakeTimeout:   20 * time.Second, // TLSHandshakeTimeout specifies the maximum amount of time waiting to wait for a TLS handshake. Zero means no timeout.
-		ExpectContinueTimeout: 0,                // 零表示没有超时，并导致正文立即发送，无需等待服务器批准
+		MaxIdleConns:          100,              // MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit.
+		IdleConnTimeout:       180,              // 不限制
+		TLSHandshakeTimeout:   60 * time.Second, // TLSHandshakeTimeout specifies the maximum amount of time waiting to wait for a TLS handshake. Zero means no timeout.
+		ExpectContinueTimeout: 60,               // 零表示没有超时，并导致正文立即发送，无需等待服务器批准
 		MaxIdleConnsPerHost:   3000,             // MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. If zero, DefaultMaxIdleConnsPerHost is used.
 		ErrLimit:              10,               // 相同目标，累计错误10次就退出
 		ErrCount:              0,
