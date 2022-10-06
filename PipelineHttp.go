@@ -171,6 +171,13 @@ func (r *PipelineHttp) DoGetWithClient4SetHdNoCloseBody(client *http.Client, szU
 	r.DoGetWithClient4SetHd(client, szUrl, method, postBody, fnCbk, nil, false)
 }
 
+func (r *PipelineHttp) CloseResponse(resp *http.Response) {
+	if nil != resp {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}
+}
+
 // application/x-www-form-urlencoded
 // multipart/form-data
 // text/plain
@@ -211,7 +218,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 	}
 	n1 := client.Timeout
 	if 0 == n1 {
-		n1 = 10
+		n1 = 50
 	}
 	ctx, cc := context.WithTimeout(r.Ctx, n1*r.Timeout)
 	defer cc()
@@ -219,7 +226,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 
 	resp, err := client.Do(req)
 	if bCloseBody && resp != nil {
-		defer resp.Body.Close() // resp 可能为 nil，不能读取 Body
+		defer r.CloseResponse(resp) // resp 可能为 nil，不能读取 Body
 	}
 	if nil != err {
 		r.ErrCount++
@@ -235,8 +242,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 	}
 	if !r.UseHttp2 && nil != resp && resp.StatusCode == http.StatusSwitchingProtocols {
 		if resp != nil {
-			io.Copy(io.Discard, resp.Body)
-			resp.Body.Close() // resp 可能为 nil，不能读取 Body
+			r.CloseResponse(resp)
 		}
 		r.UseHttp2 = true
 		r.Client = r.GetRawClient4Http2()
@@ -272,8 +278,7 @@ func (r *PipelineHttp) testHttp2(szUrl001 string) {
 		szUrl09 := "https://" + oU7.Host + oU7.Path
 		r.DoGetWithClient(c1, szUrl09, "GET", nil, func(resp *http.Response, err error, szU string) {
 			if nil != resp && (strings.HasPrefix(resp.Proto, "HTTP/2") || strings.HasPrefix(resp.Proto, "HTTP/3") || resp.StatusCode == http.StatusSwitchingProtocols) {
-				io.Copy(io.Discard, resp.Body)
-				resp.Body.Close()
+				r.CloseResponse(resp)
 				if nil != r.Client {
 					r.Client.CloseIdleConnections()
 				}
