@@ -132,15 +132,15 @@ func (r *PipelineHttp) SetCtx(ctx context.Context) {
 // https://github.com/golang/go/issues/23427
 func (r *PipelineHttp) GetTransport() http.RoundTripper {
 	var tr http.RoundTripper = &http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
-		DialContext:           r.Dial,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
-		DisableKeepAlives:     false,
-		MaxIdleConns:          r.MaxIdleConns,
-		IdleConnTimeout:       r.IdleConnTimeout,
-		TLSHandshakeTimeout:   r.TLSHandshakeTimeout,
-		ExpectContinueTimeout: r.ExpectContinueTimeout,
-		MaxIdleConnsPerHost:   r.MaxIdleConnsPerHost,
+		Proxy:           http.ProxyFromEnvironment,
+		DialContext:     r.Dial,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10},
+		//DisableKeepAlives:     false,
+		//MaxIdleConns:          r.MaxIdleConns,
+		//IdleConnTimeout:       r.IdleConnTimeout,
+		//TLSHandshakeTimeout:   r.TLSHandshakeTimeout,
+		//ExpectContinueTimeout: r.ExpectContinueTimeout,
+		//MaxIdleConnsPerHost:   r.MaxIdleConnsPerHost,
 	}
 	return tr
 }
