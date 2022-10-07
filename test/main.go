@@ -69,5 +69,5 @@ func main() {
 	}
 	wg.Wait()
 
-	log.Printf("use time: %d sec\n", (time.Now().UnixMilli()-n009)/1000)
+	log.Printf("use time: %d/%d sec\n", len(x), (time.Now().UnixMilli()-n009)/1000)
 }
