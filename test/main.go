@@ -27,6 +27,9 @@ func main() {
 	var wg sync.WaitGroup
 	n009 := time.Now().UnixMilli()
 	for _, i := range a {
+		if "" == i {
+			continue
+		}
 		c01 <- struct{}{}
 		oUrl, err := url.Parse(i)
 		if nil != err {
@@ -43,7 +46,7 @@ func main() {
 				wg.Done()
 			}()
 			x1 := xxx.NewPipelineHttp()
-			//x1.ErrLimit = 9999999
+			x1.ErrLimit = 9999999
 			defer x1.Close()
 
 			log.Println("start ", s1)
