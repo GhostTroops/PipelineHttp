@@ -230,7 +230,11 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 			r.CloseResponse(resp)
 		}
 		r.UseHttp2 = true
-		r.Client = r.GetRawClient4Http2()
+		if strings.HasPrefix(resp.Proto, "HTTP/3") {
+			r.Client = r.GetClient4Http3()
+		} else {
+			r.Client = r.GetRawClient4Http2()
+		}
 		oU7, _ := url.Parse(szUrl)
 		szUrl09 := "https://" + oU7.Host + oU7.Path
 		r.ErrLimit = 99999999
@@ -265,12 +269,16 @@ func (r *PipelineHttp) testHttp2(szUrl001 string) {
 		oU7, _ := url.Parse(szUrl001)
 		szUrl09 := "https://" + oU7.Host + oU7.Path
 		r.DoGetWithClient(c1, szUrl09, "GET", nil, func(resp *http.Response, err error, szU string) {
-			if nil != resp && (strings.HasPrefix(resp.Proto, "HTTP/2") || strings.HasPrefix(resp.Proto, "HTTP/3") || resp.StatusCode == http.StatusSwitchingProtocols) {
+			if nil != resp && resp.StatusCode == http.StatusSwitchingProtocols {
 				r.CloseResponse(resp)
 				if nil != r.Client {
 					r.Client.CloseIdleConnections()
 				}
-				r.Client = c1
+				if strings.HasPrefix(resp.Proto, "HTTP/3") {
+					r.Client = r.GetClient4Http3()
+				} else if strings.HasPrefix(resp.Proto, "HTTP/2") {
+					r.Client = c1
+				}
 				r.ErrLimit = 99999999
 			} else {
 				r.UseHttp2 = false
