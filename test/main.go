@@ -50,6 +50,7 @@ func main() {
 			defer x1.Close()
 
 			log.Println("start ", s1)
+			//x1.Client = x1.GetClient4Http3()
 			//x1.DoDirs4Http2(s1, x, 128, func(resp *http.Response, err error, szU string) {
 			x1.DoDirs(s1, x, 128, func(resp *http.Response, err error, szU string) { // auto test http2.0 and use http2.0
 				//if nil != err {
