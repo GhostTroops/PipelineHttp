@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/lucas-clemente/quic-go v0.31.1
 	github.com/projectdiscovery/retryablehttp-go v1.0.2
-	golang.org/x/net v0.5.0
+	golang.org/x/net v0.7.0
 )
 
 require (
@@ -19,7 +19,7 @@ require (
 	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20230108222341-4b8118a2686a // indirect
 	golang.org/x/mod v0.7.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/tools v0.5.0 // indirect
 )
