@@ -19,6 +19,7 @@ var szPath string
 var szUrls string
 
 /*
+go build -o ppHttp cmd/main.go
 cp $HOME/MyWork/scan4all/brute/dicts/filedic.txt $HOME/MyWork/PipelineHttp/test2/testUrl.txt
 cat $HOME/MyWork/mybugbounty/bak/fingerprint.json|grep -v '"delete":true'|jq ".probeList[].url"|sort -u|sed 's/"//g'>$HOME/MyWork/PipelineHttp/cmd/testUrl.txt
 */
@@ -27,6 +28,8 @@ func main() {
 	if 1 < len(os.Args) {
 		if data, err := os.ReadFile(os.Args[1]); nil == err {
 			a = strings.Split(string(data), "\n")
+		} else {
+			a = os.Args[1:]
 		}
 	} else {
 		a = strings.Split(szUrls, "\n")
@@ -67,7 +70,7 @@ func main() {
 				//}
 
 				if nil != resp && 200 == resp.StatusCode {
-					log.Printf("%d %s %s %s\n", resp.StatusCode, resp.Proto, szU, resp.Request.RemoteAddr)
+					log.Printf("%d %s %s\n", resp.StatusCode, resp.Proto, szU)
 				} else if nil != resp {
 					//log.Printf("%d %s %s", resp.StatusCode, resp.Proto, szU)
 				}
