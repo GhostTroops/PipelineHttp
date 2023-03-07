@@ -1,0 +1,26 @@
+env:
+  - GO111MODULE=on
+#before:
+#  hooks:
+#    - go mod tidy
+project_name: PipelineHttp
+builds:
+  - id: PipelineHttp-darwin
+    ldflags:
+      - -s -w
+    binary: ppHttp
+    env:
+      - CGO_ENABLED=1
+    main: cmd/main.go
+    goos:
+      - darwin
+    goarch:
+      - amd64
+
+archives:
+- format: zip
+  replacements:
+      darwin: macOS
+
+checksum:
+  name_template: "{{ .ProjectName }}-mac-checksums.txt"

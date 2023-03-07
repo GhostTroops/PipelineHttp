@@ -1,0 +1,24 @@
+env:
+  - GO111MODULE=on
+#before:
+#  hooks:
+#    - go mod tidy
+project_name: PipelineHttp
+builds:
+  - id: PipelineHttp-linux
+    ldflags:
+      - -s -w
+    binary: ppHttp
+    env:
+      - CGO_ENABLED=1
+      #  0 你再重新编译链接，那么 Go 链接器会使用 Go 版本的实现，这样你将得到一个没有动态链接的纯静态二进制程序
+    main: cmd/main.go
+    goos:
+      - linux
+    goarch:
+      - amd64
+archives:
+- format: zip
+
+checksum:
+  name_template: "{{ .ProjectName }}-linux-checksums.txt"
