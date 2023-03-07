@@ -17,7 +17,8 @@ var szPath string
 var szUrls string
 
 /*
-cat $HOME/MyWork/mybugbounty/bak/fingerprint.json|grep -v '"delete":true'|jq ".probeList[].url"|sort -u|sed 's/"//g'>$HOME/MyWork/PipelineHttp/test/testUrl.txt
+cp $HOME/MyWork/scan4all/brute/dicts/filedic.txt $HOME/MyWork/PipelineHttp/test2/testUrl.txt
+cat $HOME/MyWork/mybugbounty/bak/fingerprint.json|grep -v '"delete":true'|jq ".probeList[].url"|sort -u|sed 's/"//g'>$HOME/MyWork/PipelineHttp/cmd/testUrl.txt
 */
 func main() {
 	a := strings.Split(szUrls, "\n")
@@ -45,14 +46,15 @@ func main() {
 			}()
 			x1 := xxx.NewPipelineHttp()
 			defer x1.Close()
-
+			x1.ErrCount = 0
+			x1.ErrLimit = len(x) + 1
 			log.Println("start ", s1)
 			for _, j := range x {
 				resp, err := client.Get(s1 + j)
 				if err == nil {
 					defer resp.Body.Close()
 					if nil != resp && 200 == resp.StatusCode {
-						log.Printf("%d %s %s", resp.StatusCode, resp.Proto, s1+j)
+						log.Printf("%d %s %s\n", resp.StatusCode, resp.Proto, s1+j)
 					}
 				}
 			}

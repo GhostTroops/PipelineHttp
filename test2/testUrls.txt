@@ -1,2 +1,1 @@
-https://127.0.0.1:8081/
-https://www.sina.com.cn/
+https://wap.babihtml.com
