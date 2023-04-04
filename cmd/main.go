@@ -65,19 +65,19 @@ func main() {
 			x1.Client = x1.GetClient4Http2()
 			//x1.DoDirs4Http2(s1, x, 128, func(resp *http.Response, err error, szU string) {
 			x1.DoDirs(s1, x, 16, func(resp *http.Response, err error, szU string) { // auto cmd http2.0 and use http2.0
-				//if nil != err {
-				//	log.Println(err)
-				//}
+				if nil != err {
+					log.Println(err)
+					return
+				}
 
 				if nil != resp && 200 == resp.StatusCode {
-					log.Printf("%d %s %s\n", resp.StatusCode, resp.Proto, szU)
+					log.Printf("\r%d %s %s\n", resp.StatusCode, resp.Proto, szU)
 				} else if nil != resp {
 					//log.Printf("%d %s %s", resp.StatusCode, resp.Proto, szU)
 				}
 			})
 			//time.Sleep(time.Second * 5)
-			//x1.Close()
-
+			x1.Close()
 		}(i)
 	}
 	wg.Wait()
