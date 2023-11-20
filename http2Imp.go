@@ -32,6 +32,9 @@ func (r *PipelineHttp) GetClient4Http2() *http.Client {
 		r.UseHttp2 = r.Client != nil
 		r.ver = 2
 	}
+	if o, ok := r.Client.Transport.(*http.Transport); ok {
+		o.Proxy = http.ProxyFromEnvironment
+	}
 	return r.Client
 }
 

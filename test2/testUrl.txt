@@ -1,7 +1,9 @@
 /Login.jsp
 /login.jsp
-/stats.json
-/.well-known/security.txt
+.*org/login
+/confluence/server-info.action
+/server-info.action
+/setup/setupadministrator.action
 ../../../../../../../../../../../../../../../../../../usr/local/cpanel/logs/login_log%00
 ../../../../../../../../../../../../../../../../../../usr/local/cpanel/logs/login_log
 ../../../../../../../../../../../../../../../../../usr/local/cpanel/logs/login_log
@@ -102,7 +104,6 @@
 /apps/frontend/modules/main/templates/loginSuccess.php
 /apps/frontend/modules/main/validate/login.yml
 /auth/login
-/classicapi/doc/
 /auth/login/github
 /auth/login/google
 /auth/login/sentry/
@@ -122,8 +123,8 @@
 /components/com_users/views/login/tmpl/default_logout.php
 /components/com_users/views/login/tmpl/index.html
 /components/com_users/views/login/view.html.php
+/partnercdkeys/assignkeys/
 /confluence/login.vm
-/old/wp-admin/setup-config.php
 /console/login/LoginForm.jsp
 /doc/page/login.asp
 /downloader/template/login.phtml
@@ -164,7 +165,6 @@
 /login.php3
 /login.php4
 /login.pl
-/help/android/
 /login.py
 /login.rb
 /login.vm
@@ -3707,6 +3707,7 @@ $metadata
 /.web
 /.well-known/acme-challenge/
 /.well-known/apple-app-site-association
+/.well-known/security.txt
 /.workspace/
 /.wp-config.php.swp
 /.www_acl
@@ -7051,18 +7052,9 @@ $metadata
 /example.php
 /examples
 /examples/
-/conf5
-/privacy/policy/ms/version
-/v5/gc
-/v5/gcf
-/snsconf
-/v5/gcl
-/v4/imopenstat/im_native_sdk_report
-/privacy/policy/authorization/status
 /examples/index.html
 /examples/jsp/index.html
 /examples/jsp/jsp2/misc/config.jsp
-/;param=value/examples/jsp/snp/snoop.jsp
 /examples/jsp/snp/snoop.jsp
 /examples/jsp/source.jsp
 /examples/servlet/HelloWorldExample
@@ -7398,7 +7390,6 @@ $metadata
 /id/:id
 /id_dsa
 /id_dsa.ppk
-/_groupcache/
 /id_rsa
 /id_rsa.pub
 /iiasdmpwd/
