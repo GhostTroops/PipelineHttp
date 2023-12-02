@@ -319,7 +319,7 @@ func (r *PipelineHttp) DoGetWithClient4SetHd(client *http.Client, szUrl string, 
 			r.Client = r.GetRawClient4Http2()
 		}
 		oU7, _ := url.Parse(szUrl)
-		szUrl09 := "https://" + oU7.Host + oU7.Path
+		szUrl09 := "https://" + oU7.Host + strings.Split(szUrl, oU7.Host)[1]
 		r.ErrLimit = 99999999
 		r.CloseResponse(resp)
 		r.DoGetWithClient4SetHd(r.Client, szUrl09, method, postBody, fnCbk, setHd, bCloseBody)

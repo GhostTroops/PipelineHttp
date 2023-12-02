@@ -117,6 +117,9 @@ func (r *PipelineHttp) GetTransport4http2() http.RoundTripper {
 			//	return net.Dial(netw, addr)
 			//},
 		}
+		if x, ok := tr.(*http.Transport); ok {
+			http2.ConfigureTransport(x)
+		}
 		return tr
 	}
 	return nil

@@ -19,11 +19,15 @@ var szPath string
 var szUrls string
 
 /*
+1、遵循不重复造轮子的原则
+为什么有了 gobuster 还要有 speeDir（speed dir）
+
 go build -o ppHttp cmd/main.go
 cp $HOME/MyWork/scan4all/brute/dicts/filedic.txt $HOME/MyWork/PipelineHttp/test2/testUrl.txt
 cat $HOME/MyWork/mybugbounty/bak/fingerprint.json|grep -v '"delete":true'|jq ".probeList[].url"|sort -u|sed 's/"//g'>$HOME/MyWork/PipelineHttp/cmd/testUrl.txt
 */
 func main() {
+	os.Args = []string{"", "/Users/51pwn/MyWork/scan4all/brute/dicts/filedic.txt"}
 	var a []string
 	if 1 < len(os.Args) {
 		if data, err := os.ReadFile(os.Args[1]); nil == err {
