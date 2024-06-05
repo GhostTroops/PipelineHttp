@@ -1,11 +1,15 @@
 package PipelineHttp
 
 import (
+	"context"
 	"crypto/tls"
+	"fmt"
 	"golang.org/x/net/http2"
 	"io"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 )
 
@@ -65,8 +69,35 @@ func (r *PipelineHttp) DoUrl4Http24Frame(szUrl, szMethod string, framerCbk func(
 //}
 
 // dialT returns a connection that writes everything that is read to w.
-func (r *PipelineHttp) dialT(w io.Writer) func(network, addr string, cfg *tls.Config) (net.Conn, error) {
-	return func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+func (r *PipelineHttp) dialT(w io.Writer) func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
+	return func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
+		if s := os.Getenv("HTTPS_PROXY"); "" != s {
+			if proxyURL, err := url.Parse(s); err == nil {
+				transport := &http.Transport{
+					Proxy:           http.ProxyURL(proxyURL),
+					TLSClientConfig: cfg,
+				}
+				client := &http.Client{Transport: transport}
+				req := &http.Request{
+					URL:    &url.URL{Scheme: "https", Host: addr},
+					Method: "CONNECT",
+				}
+				resp, err := client.Do(req)
+				if err != nil {
+					return nil, err
+				}
+				if resp.StatusCode != 200 {
+					return nil, fmt.Errorf("non-200 status code: %d", resp.StatusCode)
+				}
+				hijacker, ok := resp.Body.(http.Hijacker)
+				if !ok {
+					return nil, fmt.Errorf("response body is not a http.Hijacker")
+				}
+				conn, _, err := hijacker.Hijack()
+				return &tConn{conn, w}, err
+			}
+		}
+
 		conn, err := tls.Dial(network, addr, cfg)
 		return &tConn{conn, w}, err
 	}
@@ -106,7 +137,8 @@ func (r *PipelineHttp) GetTransport4http2() http.RoundTripper {
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true, //跳过证书验证
 			},
-			DialTLS:                    r.dialT(r.Buf),
+			DialTLSContext: r.dialT(r.Buf),
+			//DialTLS:                    r.dialT(r.Buf),
 			DisableCompression:         false,
 			AllowHTTP:                  true,
 			ReadIdleTimeout:            50 * time.Second,
